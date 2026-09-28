@@ -1,0 +1,72 @@
+# Visual Studio
+.vs/
+.vscode/
+.github/
+
+# Build results
+[Bb]in/
+[Oo]bj/
+Migrations/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Visual Studio cache/options
+*.rsuser
+
+# Test results
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+
+# Code coverage
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# ASP.NET Core
+appsettings.*.json
+
+# Keep development configuration if it contains no secrets
+!appsettings.json
+
+# User Secrets
+secrets.json
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# JetBrains Rider
+.idea/
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# Publish output
+publish/
+[Pp]ublish/
+
+# Temporary files
+*.tmp
+*.temp
