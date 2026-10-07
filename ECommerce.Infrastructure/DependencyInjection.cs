@@ -28,6 +28,8 @@ public static class DependencyInjection
 
         services.AddScoped<ITokenService, JwtTokenService>();
 
+        services.AddScoped<IAuthService, AuthService>();
+
         return services;
     }
 }
