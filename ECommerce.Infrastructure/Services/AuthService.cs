@@ -72,9 +72,9 @@ public class AuthService : IAuthService
 
         var user = await _userRepository.GetByEmailAsync(email);
 
-        if (user is null) throw new InvalidOperationException("User not found.");
+        if (user is null) return null;
 
-        var passwordIsValid = _passwordHasher.verify(
+        var passwordIsValid = _passwordHasher.Verify(
             request.Password,
             user.PasswordHash);
 
@@ -86,6 +86,22 @@ public class AuthService : IAuthService
         {
             Token = token,
             UserId = user.Id,
+            Email = user.Email,
+            Role = user.Role.ToString()
+        };
+    }
+
+    public async Task<CurrentUserResponse> GetCurrentUserAsync(int userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user is null) return null;
+
+        return new CurrentUserResponse
+        {
+            UserId = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
             Email = user.Email,
             Role = user.Role.ToString()
         };

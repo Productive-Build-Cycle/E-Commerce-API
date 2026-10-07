@@ -8,29 +8,15 @@ namespace ECommerce.Infrastructure.Services;
 
 public class PasswordHasher : IPasswordHasher
 {
-    #region Fields
-
     private readonly PasswordHasher<object> _passwordHasher = new();
-
-    #endregion
-
-    #region Constructors
-
-    public PasswordHasher(PasswordHasher<object> passwordHasher)
-    {
-        _passwordHasher = passwordHasher;
-    }
-
-    #endregion
-
-    #region Methods
 
     public string Hash(string password)
     {
-        return _passwordHasher.HashPassword(null!, password);
+        return _passwordHasher.HashPassword
+            (user: null!, password: password);
     }
 
-    public bool verify(string password, string passwordHash)
+    public bool Verify(string password, string passwordHash)
     {
         var result = _passwordHasher.VerifyHashedPassword(
             null!,
@@ -40,6 +26,4 @@ public class PasswordHasher : IPasswordHasher
         return result == PasswordVerificationResult.Success ||
                result == PasswordVerificationResult.SuccessRehashNeeded;
     }
-
-    #endregion
 }
