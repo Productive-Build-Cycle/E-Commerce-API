@@ -4,7 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
+      <UserSecretsId>edf6a4b5-10b3-45a8-9421-d99fb99c176f</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ECommerce.Application\ECommerce.Application.csproj" />
@@ -19,7 +20,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Controllers\" />
       <Folder Include="Extensions\" />
     </ItemGroup>
 
