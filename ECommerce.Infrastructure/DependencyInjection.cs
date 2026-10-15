@@ -28,6 +28,10 @@ public static class DependencyInjection
 
         services.AddScoped<IProductService, ProductService>();
 
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+
+        services.AddScoped<ICategoryService, CategoryService>();
+
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         services.AddScoped<ITokenService, JwtTokenService>();
