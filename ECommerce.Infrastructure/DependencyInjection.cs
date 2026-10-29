@@ -4,6 +4,7 @@ using System.Text;
 using ECommerce.Application.Interfaces.Repositories;
 using ECommerce.Application.Interfaces.Services;
 using ECommerce.Infrastructure.Persistence;
+using ECommerce.Infrastructure.Persistence.SeedData;
 using ECommerce.Infrastructure.Repositories;
 using ECommerce.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,8 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, JwtTokenService>();
 
         services.AddScoped<IAuthService, AuthService>();
+
+        services.AddScoped<DatabaseSeeder>();
 
         return services;
     }
