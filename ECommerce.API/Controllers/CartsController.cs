@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using ECommerce.Application.DTOs.Cart;
+using ECommerce.Application.DTOs.Discounts;
+using ECommerce.Application.DTOs.Orders;
 using ECommerce.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors.Infrastructure;
@@ -10,9 +12,10 @@ namespace ECommerce.API.Controllers;
 [ApiController]
 [Route("api/cart")]
 [Authorize]
-public sealed class CartsController(ICartService service) : ControllerBase
+public sealed class CartsController(ICartService service, ICheckoutService checkoutService) : ControllerBase
 {
     private readonly ICartService _service = service;
+    private readonly ICheckoutService _checkoutService = checkoutService;
 
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct) =>
@@ -60,5 +63,54 @@ public sealed class CartsController(ICartService service) : ControllerBase
             _ => (StatusCodes.Status400BadRequest, "Cart request could not be completed.")
         };
         return StatusCode(status, new { error = message });
+    }
+
+    [HttpPost("discount")]
+    public async Task<IActionResult> CalculateDiscount(
+    [FromBody] ApplyDiscountRequest request,
+    CancellationToken ct)
+    {
+        try
+        {
+            var userIdValue = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdValue, out var userId))
+                return Unauthorized();
+
+            var result = await _service.CalculateDiscountAsync(
+                userId,
+                request.Code,
+                ct);
+
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpPost("checkout")]
+    public async Task<IActionResult> Checkout(
+    CheckoutRequest request,
+    CancellationToken ct)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        try
+        {
+            var result = await _checkoutService.CheckoutAsync(
+                userId,
+                request,
+                ct);
+
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }

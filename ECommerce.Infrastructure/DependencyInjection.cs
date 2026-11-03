@@ -45,6 +45,12 @@ public static class DependencyInjection
 
         services.AddScoped<DatabaseSeeder>();
 
+        services.AddScoped<IDiscountRepository, DiscountRepository>();
+
+        services.AddScoped<IDiscountService, DiscountService>();
+
+        services.AddScoped<ICheckoutService, CheckoutService>();
+
         return services;
     }
 }
