@@ -1,4 +1,5 @@
 using ECommerce.Application.DTOs.Cart;
+using ECommerce.Application.DTOs.Discounts;
 
 namespace ECommerce.Application.Interfaces.Services;
 
@@ -23,4 +24,6 @@ public interface ICartService
 
     /// <summary>Removes every line of the caller's cart (idempotent, returns the empty cart).</summary>
     Task<CartResponse> ClearAsync(int userId, CancellationToken ct = default);
+
+    Task<DiscountCalculationResponse> CalculateDiscountAsync(int userId, string code, CancellationToken ct = default);
 }

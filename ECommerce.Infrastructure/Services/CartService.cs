@@ -1,13 +1,16 @@
 using ECommerce.Application.DTOs.Cart;
+using ECommerce.Application.DTOs.Discounts;
 using ECommerce.Application.Interfaces.Repositories;
 using ECommerce.Application.Interfaces.Services;
 using ECommerce.Domain.Entities;
 
 namespace ECommerce.Infrastructure.Services;
 
-public sealed class CartService(ICartRepository repository) : ICartService
+public sealed class CartService(ICartRepository repository, 
+                                IDiscountService discountService) : ICartService
 {
     private readonly ICartRepository _repository = repository;
+    private readonly IDiscountService _discountService = discountService;
 
     public async Task<CartResponse> GetMyCartAsync(int userId, CancellationToken ct = default) =>
         Map(await _repository.GetByUserIdWithItemsAsync(userId, false, ct));
@@ -73,5 +76,27 @@ public sealed class CartService(ICartRepository repository) : ICartService
         var items = cart.Items.OrderBy(i => i.Id).Select(i => new CartItemResponse(i.Id, i.ProductId,
             i.Product?.Name ?? string.Empty, i.Quantity, i.Product?.Price ?? 0m, i.Quantity * (i.Product?.Price ?? 0m))).ToList();
         return new CartResponse(cart.Id, items, items.Sum(i => i.LineTotal), items.Sum(i => i.Quantity));
+    }
+
+    public async Task<DiscountCalculationResponse> CalculateDiscountAsync(
+    int userId,
+    string code,
+    CancellationToken ct = default)
+    {
+        var cart = await _repository.GetByUserIdWithItemsAsync(
+            userId,
+            false,
+            ct);
+
+        if (cart is null || cart.Items.Count == 0)
+            throw new ArgumentException("Your shopping cart is empty.");
+
+        var subtotal = cart.Items.Sum(item =>
+            item.Quantity * (item.Product?.Price ?? 0m));
+
+        return await _discountService.CalculateAsync(
+            code,
+            subtotal,
+            ct);
     }
 }
