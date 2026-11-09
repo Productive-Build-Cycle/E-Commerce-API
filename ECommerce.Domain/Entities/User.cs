@@ -22,5 +22,7 @@ namespace ECommerce.Domain.Entities
         public Cart? Cart { get; set; }
 
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+
+        public ICollection<UserVoucher> Vouchers { get; set; } = new List<UserVoucher>();
     }
 }

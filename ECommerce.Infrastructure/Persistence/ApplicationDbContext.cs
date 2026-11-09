@@ -31,6 +31,8 @@ namespace ECommerce.Infrastructure.Persistence
 
         public DbSet<Discount> Discounts => Set<Discount>();
 
+        public DbSet<UserVoucher> UserVouchers => Set<UserVoucher>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

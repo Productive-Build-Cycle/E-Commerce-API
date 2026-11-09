@@ -47,6 +47,8 @@ public static class DependencyInjection
 
         services.AddScoped<IDiscountRepository, DiscountRepository>();
 
+        services.AddScoped<IUserVoucherRepository, UserVoucherRepository>();
+
         services.AddScoped<IDiscountService, DiscountService>();
 
         services.AddScoped<ICheckoutService, CheckoutService>();
