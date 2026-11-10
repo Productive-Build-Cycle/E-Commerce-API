@@ -32,7 +32,12 @@ public sealed class UserVoucherConfiguration : IEntityTypeConfiguration<UserVouc
 
             table.HasCheckConstraint(
                 "CK_UserVouchers_UsedAtUtc",
-                "[IsUsed] = 0 OR [UsedAtUtc] IS NOT NULL");
+                "([IsUsed] = 0 AND [UsedAtUtc] IS NULL) OR " +
+                "([IsUsed] = 1 AND [UsedAtUtc] IS NOT NULL)");
+
+            table.HasCheckConstraint(
+                "CK_UserVouchers_PercentageValue",
+                "[Type] <> 1 OR [Value] <= 100");
         });
 
         builder.HasKey(x => x.Id);

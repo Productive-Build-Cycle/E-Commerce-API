@@ -39,6 +39,8 @@ public static class DependencyInjection
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
+        services.AddSingleton<WelcomeVoucherCodeGenerator>();
+
         services.AddScoped<ITokenService, JwtTokenService>();
 
         services.AddScoped<IAuthService, AuthService>();
