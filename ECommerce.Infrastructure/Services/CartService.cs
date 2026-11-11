@@ -95,6 +95,7 @@ public sealed class CartService(ICartRepository repository,
             item.Quantity * (item.Product?.Price ?? 0m));
 
         return await _discountService.CalculateAsync(
+            userId,
             code,
             subtotal,
             ct);
