@@ -1,11 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Globalization;
 using ECommerce.Application.DTOs.Authentication;
 using ECommerce.Application.Interfaces.Repositories;
 using ECommerce.Application.Interfaces.Services;
 using ECommerce.Domain.Entities;
 using ECommerce.Domain.Enums;
+using ECommerce.Infrastructure.Persistence;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ECommerce.Infrastructure.Services;
 
@@ -16,17 +18,32 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITokenService _tokenService;
+    private readonly IUserVoucherRepository _userVoucherRepository;
+    private readonly WelcomeVoucherCodeGenerator _voucherCodeGenerator;
+    private readonly ApplicationDbContext _context;
+    private readonly IConfiguration _configuration;
 
 
     #endregion
 
     #region Constructors
 
-    public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService)
+    public AuthService(
+        IUserRepository userRepository,
+        IPasswordHasher passwordHasher,
+        ITokenService tokenService,
+        IUserVoucherRepository userVoucherRepository,
+        WelcomeVoucherCodeGenerator voucherCodeGenerator,
+        ApplicationDbContext context,
+        IConfiguration configuration)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
+        _userVoucherRepository = userVoucherRepository;
+        _voucherCodeGenerator = voucherCodeGenerator;
+        _context = context;
+        _configuration = configuration;
     }
 
     #endregion
@@ -36,34 +53,76 @@ public class AuthService : IAuthService
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
         var email = request.Email.Trim().ToLower();
+        var maximumDiscountAmount = GetWelcomeVoucherMaximumDiscountAmount();
 
         var exists = await _userRepository.GetByEmailAsync(email);
 
         if (exists != null) throw new InvalidOperationException("User with this email already exists.");
 
-        // Continue with registration logic...
-        var user = new User
+        for (var attempt = 0; attempt < 5; attempt++)
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = email,
-            PasswordHash = _passwordHasher.Hash(request.Password),
-            Role = UserRole.Customer // Default role
-        };
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync();
 
-        await _userRepository.AddAsync(user);
+            try
+            {
+                var user = new User
+                {
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    Email = email,
+                    PasswordHash = _passwordHasher.Hash(request.Password),
+                    Role = UserRole.Customer
+                };
 
-        await _userRepository.SaveChangesAsync();
+                await _userRepository.AddAsync(user);
+                await _userRepository.SaveChangesAsync();
 
-        var token = _tokenService.GenerateToken(user);
+                var now = DateTime.UtcNow;
+                var voucher = new UserVoucher
+                {
+                    UserId = user.Id,
+                    Code = _voucherCodeGenerator.Generate(),
+                    Type = DiscountType.Percentage,
+                    Value = 20m,
+                    StartDate = now,
+                    EndDate = now.AddDays(30),
+                    MinimumOrderAmount = 0m,
+                    MaximumDiscountAmount = maximumDiscountAmount,
+                    IsActive = true,
+                    IsUsed = false,
+                    UsedAtUtc = null
+                };
 
-        return new AuthResponse
-        {
-            Token = token,
-            UserId = user.Id,
-            Email = user.Email,
-            Role = user.Role.ToString()
-        };
+                await _userVoucherRepository.AddAsync(voucher);
+                await _userVoucherRepository.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var token = _tokenService.GenerateToken(user);
+
+                return new AuthResponse
+                {
+                    Token = token,
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Role = user.Role.ToString(),
+                    WelcomeVoucherCode = voucher.Code
+                };
+            }
+            catch (DbUpdateException ex) when (IsVoucherCodeCollision(ex))
+            {
+                await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Unable to generate a unique welcome voucher code. Please try again.");
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -105,6 +164,35 @@ public class AuthService : IAuthService
             Email = user.Email,
             Role = user.Role.ToString()
         };
+    }
+
+    private decimal GetWelcomeVoucherMaximumDiscountAmount()
+    {
+        var configuredValue = _configuration[
+            "WelcomeVoucher:MaximumDiscountAmount"];
+
+        if (string.IsNullOrWhiteSpace(configuredValue) ||
+            !decimal.TryParse(
+                configuredValue,
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out var maximumDiscountAmount) ||
+            maximumDiscountAmount <= 0)
+        {
+            throw new InvalidOperationException(
+                "WelcomeVoucher:MaximumDiscountAmount must be configured as a positive decimal value.");
+        }
+
+        return maximumDiscountAmount;
+    }
+
+    private static bool IsVoucherCodeCollision(DbUpdateException exception)
+    {
+        return exception.InnerException is SqlException sqlException &&
+               sqlException.Number is 2601 or 2627 &&
+               sqlException.Message.Contains(
+                   "IX_UserVouchers_Code",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

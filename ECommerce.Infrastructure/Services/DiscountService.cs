@@ -9,10 +9,14 @@ namespace ECommerce.Infrastructure.Services;
 public sealed class DiscountService : IDiscountService
 {
     private readonly IDiscountRepository _repository;
+    private readonly IUserVoucherRepository _userVoucherRepository;
 
-    public DiscountService(IDiscountRepository repository)
+    public DiscountService(
+        IDiscountRepository repository,
+        IUserVoucherRepository userVoucherRepository)
     {
         _repository = repository;
+        _userVoucherRepository = userVoucherRepository;
     }
 
     public async Task<IReadOnlyList<DiscountResponse>> ListAsync(
@@ -155,9 +159,10 @@ public sealed class DiscountService : IDiscountService
     }
 
     public async Task<DiscountCalculationResponse> CalculateAsync(
-    string code,
-    decimal subtotal,
-    CancellationToken ct = default)
+        int userId,
+        string code,
+        decimal subtotal,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Discount code is required.");
@@ -167,6 +172,33 @@ public sealed class DiscountService : IDiscountService
 
         var normalizedCode = NormalizeCode(code);
 
+        var voucher = await _userVoucherRepository.GetByCodeAsync(
+            normalizedCode,
+            ct);
+
+        if (voucher is not null)
+        {
+            if (voucher.UserId != userId)
+                throw new ArgumentException(
+                    "This voucher does not belong to the current user.");
+
+            if (!voucher.IsActive)
+                throw new ArgumentException("This voucher is inactive.");
+
+            if (voucher.IsUsed)
+                throw new ArgumentException("This voucher has already been used.");
+
+            return Calculate(
+                voucher.Code,
+                voucher.Type,
+                voucher.Value,
+                voucher.StartDate,
+                voucher.EndDate,
+                voucher.MinimumOrderAmount,
+                voucher.MaximumDiscountAmount,
+                subtotal);
+        }
+
         var discount = await _repository.GetByCodeAsync(normalizedCode, ct);
 
         if (discount is null)
@@ -175,46 +207,55 @@ public sealed class DiscountService : IDiscountService
         if (!discount.IsActive)
             throw new ArgumentException("This discount is inactive.");
 
+        return Calculate(
+            discount.Code,
+            discount.Type,
+            discount.Value,
+            discount.StartDate,
+            discount.EndDate,
+            discount.MinimumOrderAmount,
+            discount.MaximumDiscountAmount,
+            subtotal);
+    }
+
+    private static DiscountCalculationResponse Calculate(
+        string code,
+        DiscountType type,
+        decimal value,
+        DateTime startDate,
+        DateTime endDate,
+        decimal minimumOrderAmount,
+        decimal maximumDiscountAmount,
+        decimal subtotal)
+    {
         var now = DateTime.UtcNow;
 
-        if (now < discount.StartDate || now > discount.EndDate)
+        if (now < startDate || now > endDate)
             throw new ArgumentException("This discount is expired or not yet valid.");
 
-        if (subtotal < discount.MinimumOrderAmount)
+        if (subtotal < minimumOrderAmount)
             throw new ArgumentException(
-                $"Minimum order amount is {discount.MinimumOrderAmount}.");
+                $"Minimum order amount is {minimumOrderAmount}.");
 
-        decimal discountAmount = discount.Type switch
+        decimal discountAmount = type switch
         {
-            DiscountType.Percentage =>
-                subtotal * discount.Value / 100m,
-
-            DiscountType.FixedAmount =>
-                discount.Value,
-
+            DiscountType.Percentage => subtotal * value / 100m,
+            DiscountType.FixedAmount => value,
             _ => throw new ArgumentException("Invalid discount type.")
         };
 
-        // Respect the maximum discount limit.
-        discountAmount = Math.Min(
-            discountAmount,
-            discount.MaximumDiscountAmount);
-
-        // Discount cannot exceed the order subtotal.
+        discountAmount = Math.Min(discountAmount, maximumDiscountAmount);
         discountAmount = Math.Min(discountAmount, subtotal);
-
         discountAmount = decimal.Round(
             discountAmount,
             2,
             MidpointRounding.AwayFromZero);
 
-        var finalTotal = subtotal - discountAmount;
-
         return new DiscountCalculationResponse(
-            discount.Code,
-            discount.Type,
+            code,
+            type,
             subtotal,
             discountAmount,
-            finalTotal);
+            subtotal - discountAmount);
     }
 }
