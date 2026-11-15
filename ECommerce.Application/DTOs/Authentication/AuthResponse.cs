@@ -13,4 +13,6 @@ public class AuthResponse
     public string Email { get; set; } = null!;
 
     public string Role { get; set; } = null!;
+
+    public string? WelcomeVoucherCode { get; set; }
 }

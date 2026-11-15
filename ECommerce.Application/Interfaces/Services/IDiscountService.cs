@@ -29,7 +29,8 @@ public interface IDiscountService
         CancellationToken ct = default);
 
     Task<DiscountCalculationResponse> CalculateAsync(
-    string code,
-    decimal subtotal,
-    CancellationToken ct = default);
+        int userId,
+        string code,
+        decimal subtotal,
+        CancellationToken ct = default);
 }
