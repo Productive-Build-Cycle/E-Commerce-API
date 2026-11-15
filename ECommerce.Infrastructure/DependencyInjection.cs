@@ -4,6 +4,7 @@ using System.Text;
 using ECommerce.Application.Interfaces.Repositories;
 using ECommerce.Application.Interfaces.Services;
 using ECommerce.Infrastructure.Persistence;
+using ECommerce.Infrastructure.Persistence.SeedData;
 using ECommerce.Infrastructure.Repositories;
 using ECommerce.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,10 @@ public static class DependencyInjection
 
         services.AddScoped<IProductRepository, ProductRepository>();
 
+        services.AddScoped<ICartRepository, CartRepository>();
+
+        services.AddScoped<ICartService, CartService>();
+
         services.AddScoped<IProductService, ProductService>();
 
         services.AddScoped<IOrderRepository, OrderRepository>();
@@ -34,9 +39,21 @@ public static class DependencyInjection
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
+        services.AddSingleton<WelcomeVoucherCodeGenerator>();
+
         services.AddScoped<ITokenService, JwtTokenService>();
 
         services.AddScoped<IAuthService, AuthService>();
+
+        services.AddScoped<DatabaseSeeder>();
+
+        services.AddScoped<IDiscountRepository, DiscountRepository>();
+
+        services.AddScoped<IUserVoucherRepository, UserVoucherRepository>();
+
+        services.AddScoped<IDiscountService, DiscountService>();
+
+        services.AddScoped<ICheckoutService, CheckoutService>();
 
         return services;
     }
