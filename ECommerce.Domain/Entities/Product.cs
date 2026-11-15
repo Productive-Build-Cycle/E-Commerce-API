@@ -25,4 +25,23 @@ public class Product
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+    public void ReserveStock(int quantity)
+    {
+        if (quantity <= 0)
+            throw new ArgumentException("Quantity must be greater than zero.");
+
+        if (StockQuantity < quantity)
+            throw new ArgumentException($"Insufficient stock for '{Name}'.");
+
+        StockQuantity -= quantity;
+    }
+
+    public void ReleaseStock(int quantity)
+    {
+        if (quantity <= 0)
+            throw new ArgumentException("Quantity must be greater than zero.");
+
+        StockQuantity += quantity;
+    }
 }
